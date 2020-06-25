@@ -9,6 +9,7 @@ cnx = mysql.connector.connect(user='root', password='root',
 
 dateFormat = '%Y-%m-%d %H:%M:%S'
 
+#testtest
 def getToDoList(userId):
     try:
         cursor = cnx.cursor()
