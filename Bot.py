@@ -111,7 +111,6 @@ def list(update, context):
     update.message.reply_text(sm.getToDoList(userId))
 
 def remove(update, context):
-    #print("/remove executed")
     userId = update.message.chat_id
     arr = sm.getArrayList(userId)
     keyboard= []
@@ -127,8 +126,7 @@ def remove(update, context):
 def button(update, context):
     query = update.callback_query
     # CallbackQueries need to be answered, even if no notification to the user is needed
-    # Some clients may have trouble otherwise. 
-
+    
     query.answer()
     rawData = (query.data).split('|')
     sm.removeTask(rawData[0], rawData[1], rawData[2])
@@ -181,7 +179,7 @@ def main():
     dp.add_handler(MessageHandler(Filters.text,sendlistdaily ,pass_job_queue=True))
     dp.add_handler(MessageHandler(Filters.text,sendlistmonthly ,pass_job_queue=True))
     
-    updater.start_polling() #start bot   
+    updater.start_polling()  
     updater.idle() 
 
 if __name__=='__main__':
