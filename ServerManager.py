@@ -9,7 +9,6 @@ cnx = mysql.connector.connect(user='root', password='root',
 
 dateFormat = '%Y-%m-%d %H:%M:%S'
 
-#testtest
 def getToDoList(userId):
     try:
         cursor = cnx.cursor()
@@ -52,7 +51,8 @@ def getArrayList(userId):
         #-----------------------    
         return result
     finally: 
-        cnx.close()
+        #cnx.close()
+        print(' ')
 
 def getDoneList(userId):
     try:
@@ -70,6 +70,8 @@ def getDoneList(userId):
         print("DoneList done")
 
 def addTask(userId, task, deadline):
+
+    print("Server manager add task executed")
     
     try: 
         cursor = cnx.cursor()
