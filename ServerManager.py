@@ -17,7 +17,7 @@ def getToDoList(userId):
         
         cursor.execute(statement, args)
         result = cursor.fetchall()
-        #for debugging--------------------------------------
+        #for debugging---------------------------
         print(result)
         for row in result:
             task = row[0];
@@ -35,7 +35,6 @@ def getToDoList(userId):
         return toDoList
     finally:
         print()
-        #cnx.close()
 
 def getArrayList(userId):
     try:
@@ -51,7 +50,6 @@ def getArrayList(userId):
         #-----------------------    
         return result
     finally: 
-        #cnx.close()
         print(' ')
 
 def getDoneList(userId):

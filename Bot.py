@@ -2,6 +2,7 @@ import logging
 import datetime
 import ServerManager as sm
 
+from datetime import timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters, CallbackQueryHandler
 from ServerManager import getToDoList
@@ -37,13 +38,17 @@ def getTask(update, context):
 
 def getDate(update, context):
     date = update.message.text
-    
     d,m,y = map(int, date.split('/'))
     try:
         validDate = datetime.date(y, m, d)
-        context.user_data['date'] = date
-        update.message.reply_text('What time is the task due? Enter in 24hr format')
-        return TIME
+        todayDate = datetime.date.today()
+        if int((validDate - todayDate).days) >= 0:
+            context.user_data['date'] = date
+            update.message.reply_text('What time is the task due? Enter in 24hr format')
+            return TIME
+        else:
+            update.message.reply_text('Please enter a future date!')
+            return INVALIDDATE
     except ValueError:
         update.message.reply_text('Date entered is invalid, re-enter in dd/mm/yyyy format!')
         return INVALIDDATE
@@ -54,35 +59,67 @@ def invalidDate(update, context):
 
     try:
         validDate = datetime.date(y, m, d)
-        context.user_data['date'] = date
-        update.message.reply_text('What time is the task due? Enter in 24hr format.')
-        return TIME
+        todayDate = datetime.date.today()
+        if int((validDate - todayDate).days) <= 0:
+            context.user_data['date'] = date
+            update.message.reply_text('What time is the task due? Enter in 24hr format')
+            return TIME
+        else:
+            update.message.reply_text('Please enter a future date!')
+            return INVALIDDATE
     except ValueError:
         update.message.reply_text('Date entered is invalid, re-enter in dd/mm/yyyy format!')
         return INVALIDDATE
         
 def getTime(update, context):
     time = update.message.text
-    newTime = time + ":00"
+    date = context.user_data.get('date')
+    newTime = time.lower().replace('pm', '').replace('am', '')
+    validTime = newTime + ":00"
 
     try:
-        validTime = datetime.datetime.strptime(newTime, "%H:%M:%S")
-        context.user_data['time'] = time
-        doneAdding(update, context)
+        validTime = datetime.datetime.strptime(validTime, "%H:%M:%S")
+        hr, minute = map(int, newTime.split(":")) 
+        if "pm" in time.lower():
+            hr += 12
+        now = datetime.datetime.now()
+        d,m,y = map(int, date.split('/'))
+        new = datetime.datetime(y, m, d, hr, minute)
+        time_diff = new - now 
+        if (time_diff < datetime.timedelta(0)):
+            update.message.reply_text('Please enter a future time!')
+            return INVALIDTIME
+        else:
+            context.user_data['time'] = time
+            context.user_data['formatTime'] = str(hr) + ":" + str(minute)
+            doneAdding(update, context)
     except ValueError:
-        update.message.reply_text('Time entered is invalid, re-enter in HH:MM 24hr format!')
-        return INVALIDTIME
+        update.message.reply_text('Time entered is invalid, please re-enter in this format <Hour>:<Minute> AM/PM!')        return INVALIDTIME
 
 def invalidTime(update, context):
     time = update.message.text
-    newTime = time + ":00"
+    date = context.user_data.get('date')
+    newTime = time.lower().replace('pm', '').replace('am', '') 
+    validTime = newTime + ":00"
 
     try:
         validTime = datetime.datetime.strptime(newTime, "%H:%M:%S")
-        context.user_data['time'] = time
-        doneAdding(update, context)
+        hr, minute = map(int, newTime.split(":")) 
+        if "pm" in time.lower():
+            hr += 12
+        now = datetime.datetime.now()
+        d,m,y = map(int, date.split('/'))
+        new = datetime.datetime(y, m, d, hr, minute)
+        time_diff = new - now 
+        if (time_diff < datetime.timedelta(0)):
+            update.message.reply_text('Please enter a future time!')
+            return INVALIDTIME
+        else:
+            context.user_data['time'] = time
+            context.user_data['formatTime'] = str(hr) + ":" + str(minute)
+            doneAdding(update, context)
     except ValueError:
-        update.message.reply_text('Time entered is invalid, re-enter in HH:MM 24hr format!')
+        update.message.reply_text('Time entered is invalid, please re-enter in this format <Hour>:<Minute> AM/PM!')
         return INVALIDTIME
 
 def doneAdding(update, context):
@@ -95,7 +132,8 @@ def doneAdding(update, context):
     update.message.reply_text('\"' + task + '\"' + ' due on ' + date + ' at ' + 
         time + ' has been added!') 
 
-    deadline = formatDatetime(date, time)
+    formattedTime = user_data.get('formatTime')
+    deadline = formatDatetime(date, formattedTime)
     sm.addTask(userId, task, deadline)
     user_data.clear()
     return ConversationHandler.END
@@ -116,7 +154,7 @@ def remove(update, context):
     keyboard= []
     
     for row in arr:
-        option = str(row[0]) + " Due on: " + row[1].strftime('%d-%m-%Y %H:%M:%S') 
+        option = str(row[0]) + " due on: " + row[1].strftime('%d-%m-%Y %H:%M:%S') 
         rawData = str(userId) + "|" + str(row[0]) + "|" + row[1].strftime('%Y-%m-%d %H:%M:%S') 
         keyboard.append([InlineKeyboardButton(str(option), callback_data = rawData)])
     
