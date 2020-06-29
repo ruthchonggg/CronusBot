@@ -15,6 +15,8 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
+token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
+
 TASK, DATE, INVALIDDATE, TIME, INVALIDTIME = range(5)
 reply_keyboard = [['List', 'Add','Remove','Help']]
 markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard = True, one_time_keyboard = False)
@@ -227,8 +229,8 @@ def error(update, context):
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 def main():
-    token1 = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
-    token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
+    #token1 = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
+    #token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
     updater = Updater(token2, use_context=True)
     job = updater.job_queue
     dp = updater.dispatcher
