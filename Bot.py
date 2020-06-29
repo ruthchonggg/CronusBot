@@ -8,14 +8,10 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMa
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters, CallbackQueryHandler
 from ServerManager import getToDoList
 
-PORT = int(os.environ.get('PORT', 5000))
-
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
-token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
 
 TASK, DATE, INVALIDDATE, TIME, INVALIDTIME = range(5)
 reply_keyboard = [['List', 'Add','Remove','Help']]
@@ -230,7 +226,7 @@ def error(update, context):
 
 def main():
     #token1 = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
-    #token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
+    token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
     updater = Updater(token2, use_context=True)
     job = updater.job_queue
     dp = updater.dispatcher
@@ -262,10 +258,11 @@ def main():
     dp.add_handler(MessageHandler(Filters.text,sendlistdaily ,pass_job_queue=True))
     dp.add_handler(MessageHandler(Filters.text,sendlistmonthly ,pass_job_queue=True))
     
+    PORT = int(os.environ.get('PORT', '8443'))
     updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
+                          port=PORT,
                           url_path=token2)
-    updater.bot.setWebhook('https://peaceful-ocean-73360.herokuapp.com/' + token2)
+    updater.bot.set_webhook('https://peaceful-ocean-73360.herokuapp.com/' + token2)
     #updater.start_polling() test test 
     updater.idle() 
 
