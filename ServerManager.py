@@ -18,23 +18,35 @@ def getToDoList(userId):
         cursor.execute(statement, args)
         result = cursor.fetchall()
         #for debugging---------------------------
-        print(result)
-        for row in result:
-            task = row[0];
-            deadline = row[1];
+        #print(result)
+        #for row in result:
+        #    task = row[0];
+        #    deadline = row[1];
             
-            print("Task: " + task + ", Deadline: " + deadline.strftime('%d-%m-%Y %H:%M:%S'))
+        #    print("Task: " + task + ", Deadline: " + deadline.strftime('%d-%m-%Y %H:%M:%S'))
         #----------------------------------------
-        toDoList = ""
-        
+        toDoList = "\"_Today is your opportunity to build the tomorrow you want.” \n- Ken Poirot_ \n"
+        toDoList += "\nHere is the list of task you have, spend your day productively!✨ \n"
+        i = 1
         for row in result:
             days_left = (row[1].date() - datetime.date.today()).days
-            
-            toDoList += row[0] + " (" + str(days_left) + " days left)" + "\n"
-        print(toDoList)  
+            now = datetime.datetime.now()
+            time_left = row[1] - now
+            diff = countDown(time_left)
+            toDoList += str(i) + ") \"" + row[0] + "\" _due in_ *" + str(diff.get('days')) + "* day *" + str(diff.get('hours')) + "* hr *" + str(diff.get('min')) + "* min\n"
+            i += 1
+            #print(toDoList)  
         return toDoList
     finally:
         print()
+
+
+#remember to chang
+def countDown(timeLeft):
+    d = {"days": timeLeft.days}
+    d["hours"], rem = divmod(timeLeft.seconds, 3600)
+    d["min"], d["seconds"] = divmod(rem, 60)
+    return d
 
 def getArrayList(userId):
     try:
@@ -50,7 +62,7 @@ def getArrayList(userId):
         #-----------------------    
         return result
     finally: 
-        print(' ')
+        print('')
 
 def getDoneList(userId):
     try:
@@ -69,7 +81,7 @@ def getDoneList(userId):
 
 def addTask(userId, task, deadline):
 
-    print("Server manager add task executed")
+    #print("Server manager add task executed")
     
     try: 
         cursor = cnx.cursor()
@@ -80,7 +92,8 @@ def addTask(userId, task, deadline):
         cnx.commit()
 
 def removeTask(userId, task, deadline):
-    print("remove task")
+    #print("remove task")
+    
     try: 
         cursor = cnx.cursor()
         statement = """UPDATE ToDoList 
