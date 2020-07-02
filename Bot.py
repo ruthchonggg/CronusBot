@@ -1,12 +1,13 @@
 import logging
 import datetime
 import ServerManager as sm
-import os
 
 from datetime import timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters, CallbackQueryHandler
 from ServerManager import getToDoList
+
+TOKEN = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
@@ -225,9 +226,7 @@ def error(update, context):
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 def main():
-    #token1 = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
-    token2 = "1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU"
-    updater = Updater(token2, use_context=True)
+    updater = Updater(TOKEN, use_context=True)
     job = updater.job_queue
     dp = updater.dispatcher
     
@@ -246,9 +245,6 @@ def main():
     dp.add_error_handler(error)
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler("start", start))
-    #dp.add_handler(CommandHandler("help", help))
-    #dp.add_handler(CommandHandler("list", list))
-    #dp.add_handler(CommandHandler("done", remove))
     dp.add_handler(CallbackQueryHandler(button))
     dp.add_handler(MessageHandler(Filters.regex('^List$'), list))
     dp.add_handler(MessageHandler(Filters.regex('^Remove'), remove))
@@ -258,12 +254,11 @@ def main():
     dp.add_handler(MessageHandler(Filters.text,sendlistdaily ,pass_job_queue=True))
     dp.add_handler(MessageHandler(Filters.text,sendlistmonthly ,pass_job_queue=True))
     
-    PORT = int(os.environ.get('PORT', '8443'))
-    updater.start_webhook(listen="0.0.0.0",
-                          port=PORT,
-                          url_path=token2)
-    updater.bot.set_webhook('https://peaceful-ocean-73360.herokuapp.com/' + token2)
-    #updater.start_polling() test test 
+    #updater.start_webhook(listen="0.0.0.0",
+    #                      port=int(PORT),
+    #                      url_path=TOKEN)
+    #updater.bot.setWebhook('https://whispering-falls-53932.herokuapp.com/' + TOKEN)
+    updater.start_polling() test test 
     updater.idle() 
 
 if __name__=='__main__':
