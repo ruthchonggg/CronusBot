@@ -6,6 +6,7 @@ from datetime import timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters, CallbackQueryHandler
 from ServerManager import getToDoList
+from pytz import timezone
 
 TOKEN = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
 
@@ -15,6 +16,8 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 TASK, DATE, INVALIDDATE, TIME, INVALIDTIME = range(5)
+
+#keyboards
 reply_keyboard = [['List', 'Add','Remove','Help']]
 markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard = True, one_time_keyboard = False)
 keyboard2 = [['Cancel']]
@@ -209,17 +212,21 @@ def button(update, context):
     query.edit_message_text(text="Great! You have completed: \n{}".format("*" + rawData[1]+ "*"), parse_mode = ParseMode.MARKDOWN) #edit later to include deadline
     
 def dailytimer(update, context):
-    context.job_queue.run_daily(sendlistdaily,8,context=update.message.chat_id)
-    context.job_queue.run_daily(sendlistdaily,20,context=update.message.chat_id)
+    print("reminders activated")
+    date1 = datetime.datetime(2020, 7, 6, 5, 36)
+    date2 = datetime.datetime(2020, 7,6, 5, 37)
+    sg = timezone('Asia/Singapore')
+    morn = sg.localize(date1)
+    night = sg.localize(date2)
 
-def monthlytimer(update, context):
-    context.job_queue.run_monthly(sendlistmonthly,12,31,context=update.message.chat_id,day_is_strict=False)
-
-def sendlistdaily(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id, text = sm.getToDoList(update.message.chat_id))
-
-def sendlistmonthly(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id, text = sm.getDoneList(update.message.chat_id))
+    context.job_queue.run_daily(sendlistdaily,morn.time(),context=update.message.chat_id)
+    context.job_queue.run_daily(sendlistdaily,night.time(),context=update.message.chat_id)
+    
+def sendlistdaily(context):
+    print("sending reminder")
+    context.bot.send_message(chat_id=context.job.context, 
+                             text = sm.getToDoList(context.job.context),
+                             parse_mode = ParseMode.MARKDOWN)
 
 def error(update, context):
     """Log Errors caused by Updates."""
@@ -249,16 +256,15 @@ def main():
     dp.add_handler(MessageHandler(Filters.regex('^List$'), list))
     dp.add_handler(MessageHandler(Filters.regex('^Remove'), remove))
     dp.add_handler(MessageHandler(Filters.regex('^Help$'), help))
-
+    dp.add_handler(CommandHandler("reminders", dailytimer, pass_job_queue = True))
+   
     
-    dp.add_handler(MessageHandler(Filters.text,sendlistdaily ,pass_job_queue=True))
-    dp.add_handler(MessageHandler(Filters.text,sendlistmonthly ,pass_job_queue=True))
     
     #updater.start_webhook(listen="0.0.0.0",
     #                      port=int(PORT),
     #                      url_path=TOKEN)
     #updater.bot.setWebhook('https://whispering-falls-53932.herokuapp.com/' + TOKEN)
-    updater.start_polling() test test 
+    updater.start_polling()
     updater.idle() 
 
 if __name__=='__main__':
