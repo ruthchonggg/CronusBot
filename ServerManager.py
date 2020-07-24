@@ -40,8 +40,6 @@ def getToDoList(userId):
     finally:
         print()
 
-
-#remember to chang
 def countDown(timeLeft):
     d = {"days": timeLeft.days}
     d["hours"], rem = divmod(timeLeft.seconds, 3600)
@@ -58,11 +56,11 @@ def getArrayList(userId):
         #for debugging----------
         for row in result:
             rawData = str(userId) + "|" + str(row[0]) + "|" + row[1].strftime('%Y-%m-%d %H:%M:%S') 
-            print(rawData)
+            #print(rawData)
         #-----------------------    
         return result
     finally: 
-        print('')
+        print()
 
 def getDoneList(userId):
     try:
@@ -103,3 +101,87 @@ def removeTask(userId, task, deadline):
         cursor.execute(statement, args)
     finally:
         cnx.commit()
+
+def removeAllOverdue(userId):
+    print('remove all')
+    try:
+        curr = (datetime.datetime.now())
+        new_curr = curr.strftime('%Y-%m-%d %H:%M:%S')
+        cursor = cnx.cursor()
+        statement = "SELECT task, deadline, isCompleted FROM ToDoList WHERE userId = %s AND deadline < '" + new_curr + "'"
+        args = (userId,)
+        cursor.execute(statement, args)
+        result = cursor.fetchall()
+        overdueList = ""
+
+        for row in result:
+            time = row[1].strftime('%H:%M')
+            hr, minute = map(int, time.split(':'))
+            if hr > 12: #account for 12am later
+                hr -= 12
+                time = str(hr) + ":" + row[1].strftime('%M') + "pm"
+            elif hr == 12: 
+                time = str(hr) + ":" + row[1].strftime('%M') + "pm"
+            else:
+                time = str(hr) + ":" + row[1].strftime('%M') + "am"
+            overdueList += row[0] + " due on " + row[1].strftime('%d/%m/%Y') + " " + time + "\n"
+        
+        #print(overdueList)    
+        statement = "DELETE FROM ToDoList WHERE deadline < '" + new_curr + "'"
+        cursor.execute(statement)
+        return overdueList
+    finally:
+        cnx.commit()
+
+def editTaskName(new, rawData):
+    try:
+        #print(rawData)
+        rawData = rawData.split('|')
+        userId = rawData[1]
+        oldName = rawData[2]
+        deadline = rawData[3]
+        cursor = cnx.cursor()
+        statement = "Update ToDoList SET task = %s WHERE userId = %s AND deadline = %s AND task = %s"
+        args = (new, userId, deadline, oldName)
+        cursor.execute(statement, args)
+    finally:
+        cnx.commit() 
+
+def editTaskDate(new, rawData):
+    try:
+        #print(rawData)
+        rawData = rawData.split('|')
+        userId = rawData[1]
+        name = rawData[2]
+        deadline = rawData[3]
+
+        time = deadline.split()[1]
+        new_deadline = str(new) + " " + time
+        #print(time)
+        #print(userId)
+        #print(oldName)
+        #print(new_deadline)
+        cursor = cnx.cursor()
+        statement = "Update ToDoList SET deadline = %s WHERE userId = %s AND deadline = %s AND task = %s"
+        args = (new_deadline, userId, deadline, name)
+        cursor.execute(statement, args)
+        return new_deadline
+    finally:
+        cnx.commit() 
+
+def editTaskTime(new, rawData):
+    try:
+        rawData = rawData.split('|')
+        userId = rawData[1]
+        name = rawData[2]
+        deadline = rawData[3]
+
+        date = deadline.split()[0]
+        new_deadline = date + " " + new
+        cursor = cnx.cursor()
+        statement = "Update ToDoList SET deadline = %s WHERE userId = %s AND deadline = %s AND task = %s"
+        args = (new_deadline, userId, deadline, name)
+        cursor.execute(statement, args)
+        return new_deadline
+    finally:
+        cnx.commit() 
