@@ -1,30 +1,37 @@
 import logging
 import datetime
 import ServerManager as sm
+import os
+import schedule
+import telebot
+from threading import Thread
+from time import sleep
 
 from datetime import timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHandler, Filters, CallbackQueryHandler
 from ServerManager import getToDoList
-from pytz import timezone
 
 TOKEN = "1163662826:AAFiWa_icg17dZYWJ3ONZ6Jd9A7VABbo5fA"
 
+bot = telebot.TeleBot(TOKEN)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 #State definitions for add
-TASK, DATE, INVALIDDATE, TIME, INVALIDTIME = range(5)
+TASK, TASK_LIMIT, DATE, INVALIDDATE, TIME, INVALIDTIME, DONE_ADD = range(7)
 
 #State definitions for edit
-START, SELECT_CAT, EDIT_DATE, EDIT_TIME, EDIT_TASK, INVALID_DATE, INVALID_TIME, DONE_EDIT = map(chr, range(8))
-
+START, SELECT_CAT, EDIT_DATE, EDIT_TIME, EDIT_TASK, MAX_LIMIT, INVALID_DATE, INVALID_TIME, DONE_EDIT = map(chr, range(9))
 END = ConversationHandler.END
 
+#State definitions for exam
+RECESSDATE,EXAMDATE,EXAM,LEVEL = range(4)
+
 #keyboards
-reply_keyboard = [['List', 'Add','Remove','Edit']]
+reply_keyboard = [['List', 'Add','Remove','Edit','Exam']]
 markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard = True, one_time_keyboard = False)
 
 keyboard2 = [['Cancel']]
@@ -36,7 +43,8 @@ markup3 = ReplyKeyboardMarkup(editKb, resize_keyboard = True, one_time_keyboard 
 cont = [['Yes', 'No']]
 markup4 = ReplyKeyboardMarkup(cont, resize_keyboard = True, one_time_keyboard = True)
 
-
+#keyboard3 = [['AddExam','Cancel']]
+#markup3 = ReplyKeyboardMarkup(keyboard3, resize_keyboard = True, one_time_keyboard = True)
 
 def start(update, context):
     reply = " Hi there, I'm Cronus and I can help you to keep track of your tasks and manage your time wisely!⌛️ \n \n"
@@ -44,21 +52,91 @@ def start(update, context):
     reply += "*List*📝: Get the list of tasks you have \n"
     reply += "*Add*➕: Add tasks to your list \n"
     reply += "*Remove*🗑: Remove tasks from your list when you are done \n"
-    reply += "*Help*🔍: Get information regarding Cronus \n \n"
+    reply += "*Help*🔍: Get information regarding Cronus \n"
+    reply += "*Exam*: Get exam review schedule \n\n"
     reply += "Let’s start by clicking on the *Add* button!"
-            
-    #update.message.reply_text(reply) 
     userId = update.message.chat_id
     context.bot.send_message(chat_id=update.message.chat_id, text=reply, parse_mode = ParseMode.MARKDOWN,
                              reply_markup = markup)
-
 
 def help(update, context):
     reply = "*List*📝: Get the list of tasks you have \n"
     reply += "*Add*➕: Add tasks to your list \n"
     reply += "*Remove*🗑: Remove tasks from your list when you are done \n"
-    reply += "Type */start* to reset the bot\n"
+    reply += "*Edit*: Edit tasks"
+    reply += "*Exam*: Get exam revision schedule \n"
     update.message.reply_text(reply, parse_mode = ParseMode.MARKDOWN)
+
+def exam(update, context):
+    update.message.reply_text(
+        'Hi! When is the begin date for recess week? \nEnter in the format: _DD/MM/YYYY_', reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
+    return RECESSDATE
+
+def getRecessDate(update, context):
+    date = update.message.text
+    try:
+        d,m,y = map(int, date.split('/'))
+        validDate = datetime.date(y, m, d)
+        todayDate = datetime.date.today()
+        if int((validDate - todayDate).days) >= 0:
+            context.user_data['recessdate'] = date
+            update.message.reply_text('When is the begin date for exam? \nEnter in the format: _DD/MM/YYYY_', reply_markup = markup2,  parse_mode = ParseMode.MARKDOWN)
+            return EXAMDATE
+        else:
+            update.message.reply_text('Please enter a future date!', reply_markup = markup2)
+            return RECESSDATE
+    except ValueError:
+        update.message.reply_text('Date entered is invalid! \nPlease re-enter in the format: _DD/MM/YYYY_', reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
+        return RECESSDATE
+
+def getExamDate(update, context):
+    date = update.message.text
+    try:
+        d, m, y = map(int, date.split('/'))
+        validDate = datetime.date(y, m, d)
+        todayDate = datetime.date.today()
+        if int((validDate - todayDate).days) >= 0:
+            context.user_data['examdate'] = date
+            update.message.reply_text('What is the exam module you would like to add? \nIf you want to quit the adding, please enter q', reply_markup=markup2,
+                                      parse_mode=ParseMode.MARKDOWN)
+            context.user_data['module'] = []
+            context.user_data['level'] = []
+            return EXAM
+        else:
+            update.message.reply_text('Please enter a future date!', reply_markup=markup2)
+            return EXAMDATE
+    except ValueError:
+        update.message.reply_text('Date entered is invalid! \nPlease re-enter in the format: _DD/MM/YYYY_',
+                                  reply_markup=markup2, parse_mode=ParseMode.MARKDOWN)
+        return EXAMDATE
+
+def addExam(update, context):
+    moduleName = update.message.text
+    if moduleName != 'q':
+        context.user_data['module'].append(moduleName)
+        update.message.reply_text(
+            "Rank the importance of the module you would like to add? \nPlease enter the number: 1/2/3. \n Level 1 means the module you invest the most energy and so on.",
+            reply_markup=markup2)
+        return LEVEL
+    else:
+        update.message.reply_text("Exam adding has done!",reply_markup = markup)
+        sm.addreviewtime(update.message.chat_id, context.user_data.get('recessdate'),
+                         context.user_data.get('examdate'))
+        sm.addexam(update.message.chat_id,context.user_data.get('module'), context.user_data.get('level'))
+        context.user_data.clear()
+        return ConversationHandler.END
+
+def addLevel(update,context):
+    level = update.message.text
+    print(level)
+    if level != '1' and level != '2' and level != '3':
+        update.message.reply_text('Please enter 1/2/3')
+        return LEVEL
+    else:
+        context.user_data['level'].append(level)
+        update.message.reply_text('What is the exam module you would like to add?', reply_markup=markup2,
+                                  parse_mode=ParseMode.MARKDOWN)
+        return EXAM
 
 #add convo
 def add(update, context):
@@ -67,21 +145,26 @@ def add(update, context):
 
 def getTask(update, context):
     taskName = update.message.text
-    context.user_data['task'] = taskName
-    update.message.reply_text(
-        'When is the due date for *{}*? \nEnter in the format: _DD/MM/YYYY_'.format(taskName), reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
-    return DATE
+
+    if len(taskName) <= 42:
+        context.user_data['task'] = taskName
+        update.message.reply_text('When is the due date for *{}*? \nEnter in the format: _DD/MM/YYYY_'.format(taskName), reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
+        return DATE
+    else:
+        update.message.reply_text("Exceeded max characters of 42, please re-enter", reply_markup = markup2)
+        return TASK_LIMIT
 
 def getDate(update, context):
     date = update.message.text
     date = date.strip()
+
     try:
         d,m,y = map(int, date.split('/'))
         validDate = datetime.date(y, m, d)
         todayDate = datetime.date.today()
         if int((validDate - todayDate).days) >= 0:
             context.user_data['date'] = date
-            update.message.reply_text('What time is it due? \nEnter in the format: _HH:MM AM/PM_', reply_markup = markup2,  parse_mode = ParseMode.MARKDOWN)
+            update.message.reply_text('What time is it due? \nEnter in the format: _HH:MM am/pm_', reply_markup = markup2,  parse_mode = ParseMode.MARKDOWN)
             return TIME
         else:
             update.message.reply_text('Please enter a future date!', reply_markup = markup2)
@@ -110,15 +193,21 @@ def invalidDate(update, context):
         
 def getTime(update, context):
     time = update.message.text
+    time = time.lower()
+
+    if ("pm" not in time) and ("am" not in time):
+        update.message.reply_text('Time entered is invalid! \nPlease enter in the format: _HH:MM AM/PM_!', reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
+        return INVALIDTIME
+        
     date = context.user_data.get('date')
-    newTime = time.lower().replace('pm', '').replace('am', '')
+    newTime = time.replace('pm', '').replace('am', '')
     newTime = newTime.strip()
     validTime = newTime + ":00"
 
     try:
         validTime = datetime.datetime.strptime(validTime, "%H:%M:%S")
         hr, minute = map(int, newTime.split(":")) 
-        if "pm" in time.lower():
+        if "pm" in time.lower() and hr != 12:
             hr += 12
         now = datetime.datetime.now()
         d,m,y = map(int, date.split('/'))
@@ -131,7 +220,9 @@ def getTime(update, context):
             context.user_data['time'] = time
             context.user_data['formatTime'] = str(hr) + ":" + str(minute)
             doneAdding(update, context)
-            return ConversationHandler.END
+            #context.user_data['msg_id'] = update.message.reply_text('Continue adding tasks?', reply_markup=markup4) 
+            update.message.reply_text('Continue adding tasks?', reply_markup = markup4)
+            return DONE_ADD
     except ValueError:
         update.message.reply_text('Time entered is invalid! \nPlease enter in the format: _HH:MM AM/PM_!', reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
         return INVALIDTIME
@@ -139,10 +230,16 @@ def getTime(update, context):
 #have to re-code, too slow
 def invalidTime(update, context):
     time = update.message.text
+    time = time.lower()
     date = context.user_data.get('date')
-    newTime = time.lower().replace('pm', '').replace('am', '') 
+    newTime = time.replace('pm', '').replace('am', '') 
     newTime = newTime.strip()
     validTime = newTime + ":00"
+
+    if ("pm" not in time) and ("am" not in time):
+        update.message.reply_text('Time entered is invalid! \nPlease enter in the format: _HH:MM AM/PM_!', reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
+        return INVALIDTIME
+
 
     try:
         validTime = datetime.datetime.strptime(validTime, "%H:%M:%S")
@@ -160,7 +257,8 @@ def invalidTime(update, context):
             context.user_data['time'] = time
             context.user_data['formatTime'] = str(hr) + ":" + str(minute)
             doneAdding(update, context)
-            return ConversationHandler.END
+            update.message.reply_text('Continue adding tasks?', reply_markup = markup4)
+            return DONE_ADD
     except ValueError:
         update.message.reply_text('Time entered is invalid!\nPlease enter in the format _HH:MM AM/PM_!', reply_markup = markup2, parse_mode = ParseMode.MARKDOWN)
         return INVALIDTIME
@@ -180,12 +278,22 @@ def doneAdding(update, context):
     sm.addTask(userId, task, deadline)
     user_data.clear()
 
-#cancelAdd
-def cancelAdd(update, context): 
+def cancel(update, context): 
     context.user_data.clear()
     update.message.reply_text("Adding of task has been cancelled, until next time!", reply_markup = markup)
     return ConversationHandler.END
- 
+
+def examcancel(update, context): 
+    context.user_data.clear()
+    update.message.reply_text("Getting exam review schedule has been cancelled, until next time!", reply_markup = markup)
+    return ConversationHandler.END
+
+def formatDatetime(date, time):
+    d, m, y = map(str, date.split("/"))
+    formatted = y + "/" + m + "/" + d + " " + time + ":00"
+    #print(formatted)
+    return formatted
+
 #return keyboard of the list of task
 def getList(arr, userId, func):
     keyboard = []
@@ -202,7 +310,7 @@ def getList(arr, userId, func):
         else:
             time = str(hr) + ":" + deadline.strftime('%M') + " am"
         option = "\"" + str(task) + "\"\n Due on: " + deadline.strftime('%d/%m/%Y') + " " + time 
-        rawData = func + "|" + str(userId) + "|" + str(row[0]) + "|" + row[1].strftime('%Y/%m/%d %H:%M:%S')
+        rawData = func + "|" + str(row[0]) + "|" + row[1].strftime('%Y/%m/%d %H:%M:%S')
         #print(rawData)
         keyboard.append([InlineKeyboardButton(str(option), callback_data = rawData)])
     
@@ -226,7 +334,7 @@ def datetime_user(datetime):
         time = hr + ":" + mins + "AM" 
     return date + " " + time
 
-
+#Edit convo
 def edit(update, context):
     userId = update.message.chat_id
     context.user_data['id'] = userId
@@ -242,17 +350,17 @@ def editCallBack(update, context):
     query = update.callback_query
     query.answer()
     
-    context.user_data['editTask'] = query.data #store userdate
+    context.user_data['editTask'] = query.data
     data = query.data.split('|')
-    date = (data[3].split())[0]
+    date = (data[2].split())[0]
     y,m,d = map(str, date.split('/'))
-    time = (data[3].split())[1]
+    time = (data[2].split())[1]
     hr, min, s = map(str, time.split(':'))
     if int(hr) > 12: 
         hr = int(hr) - 12
         time = str(hr) + ":" + str(min) + "PM"
     elif int(hr) == 12: 
-            time = str(hr) + ":" + str(min) + "PM"
+        time = str(hr) + ":" + str(min) + "PM"
     else:
         time = str(hr) + ":" + str(min) + "AM"
     deadline = d + "/" + m + "/" + y + " " + time
@@ -274,19 +382,22 @@ def selectCategory(update, context):
 
 def inputTask(update, context):
     newName = update.message.text
-    sm.editTaskName(newName, context.user_data.get('editTask'))
+    userId = update.message.chat_id
 
-    #update in user_data
-    raw = context.user_data['editTask']
-    raw = raw.split('|')
-    old_name = raw[2]
-    new_data = "e|" + raw[1] + '|' + newName + '|' + raw[3] 
-    context.user_data['editTask'] = new_data
-    #print('==' + new_data)
-    reply = "Sucessfully updated to *" + newName + "* due on *" + datetime_user(raw[3]) + "* \nContinue editing current task?"
-    update.message.reply_text(reply, parse_mode = ParseMode.MARKDOWN, reply_markup = markup4)
-    return DONE_EDIT
-
+    #number of characters
+    if len(newName) <= 42:
+        sm.editTaskName(newName, context.user_data.get('editTask'), userId)
+        #update in user_data
+        raw = context.user_data['editTask']
+        raw = raw.split('|')
+        new_data = "e|" + newName + '|' + raw[2]
+        context.user_data['editTask'] = new_data
+        reply = "Sucessfully updated to *" + newName + "* due on *" + datetime_user(raw[2]) + "* \nContinue editing current task?"
+        update.message.reply_text(reply, parse_mode = ParseMode.MARKDOWN, reply_markup = markup4)
+        return DONE_EDIT
+    else:
+        update.message.reply_text("Exceeded max characters of 42, please re-enter", reply_markup = markup2)
+        return MAX_LIMIT
 
 def choosingCategory(update, context):
     context.user_data['cat'] = update.message.text
@@ -317,13 +428,12 @@ def inputDate(update, context):
         else:
             #update database
             raw = context.user_data.get('editTask')
-            new_deadline = sm.editTaskDate(validDate, raw)
+            new_deadline = sm.editTaskDate(validDate, raw, update.message.chat_id)
 
             #update user_data
             raw = raw.split('|')
-            new_data = "e|" + raw[1] + '|' + raw[2] + '|' + new_deadline
+            new_data = "e|" + raw[1] + '|' + new_deadline
             context.user_data['editTask'] = new_data 
-
             new_datetime = datetime_user(new_deadline)
             reply = "Sucessfully updated to *" + raw[1] + "* due on *" + new_datetime + "* \nContinue editing current task?"
             update.message.reply_text(reply, parse_mode = ParseMode.MARKDOWN, reply_markup = markup4)
@@ -337,7 +447,7 @@ def inputDate(update, context):
 def inputTime(update, context):
     time = update.message.text
     raw = context.user_data.get('editTask')
-    date = ((raw.split('|')[3]).split())[0]
+    date = ((raw.split('|')[2]).split())[0]
     newTime = time.lower().replace('pm', '').replace('am', '')
     newTime = newTime.strip() #remove spaces in string
     validTime = newTime + ":00"
@@ -361,9 +471,9 @@ def inputTime(update, context):
         else:
             #update database
             raw = context.user_data.get('editTask')
-            new_deadline = sm.editTaskTime(validTime, raw)
+            new_deadline = sm.editTaskTime(validTime, raw, update.message.chat_id)
             raw = raw.split('|')
-            new_data = "e|" + raw[1] + '|' + raw[2] + '|' + new_deadline
+            new_data = "e|" + raw[1] + '|' + new_deadline
             context.user_data['editTask'] = new_data
             reply = "Sucessfully updated to *" + raw[1] + "* due on *" + datetime_user(new_deadline) + "* \nContinue editing current task?"
             update.message.reply_text(reply, parse_mode = ParseMode.MARKDOWN, reply_markup = markup4)
@@ -373,13 +483,9 @@ def inputTime(update, context):
         return INVALID_TIME
 
 def done(update, context):
+    update.message.reply_text('Until next time!',reply_markup=markup)
     context.user_data.clear()
     return ConversationHandler.END
-
-def formatDatetime(date, time):
-    d, m, y = map(str, date.split("/"))
-    formatted = y + "/" + m + "/" + d + " " + time + ":00"
-    return formatted
 
 def list(update, context):
     userId = update.message.chat_id
@@ -401,54 +507,67 @@ def removeButton(update, context):
 
     data = query.data
     rawData = (data).split('|')
-    print(rawData)
     remove_all = rawData[0]
 
     if 'all' in remove_all:
-        overdueList = sm.removeAllOverdue(rawData[1])
+        overdueList = sm.removeAllOverdue(update.message.chat_id)
         reply = "Great! You have completed: \n" + overdueList
         query.edit_message_text(text=reply, parse_mode = ParseMode.MARKDOWN)
     else:
-        sm.removeTask(rawData[1], rawData[2], rawData[3])
-        replyMsg = "\"" + rawData[2] + "\" due on " + datetime_user(rawData[3])
+        sm.removeTask(update.message.chat_id, rawData[1], rawData[2])
+        replyMsg = "\"" + rawData[2] + "\" due on " + datetime_user(rawData[2])
         query.edit_message_text(text="Great! You have completed: \n " + replyMsg, parse_mode = ParseMode.MARKDOWN)
-    
-def dailytimer(update, context):
-    print("reminders activated")
-    date1 = datetime.datetime(2020, 7, 6, 5, 36)
-    date2 = datetime.datetime(2020, 7,6, 5, 37)
-    sg = timezone('Asia/Singapore')
-    morn = sg.localize(date1)
-    night = sg.localize(date2)
 
-    context.job_queue.run_daily(sendlistdaily,morn.time(),context=update.message.chat_id)
-    context.job_queue.run_daily(sendlistdaily,night.time(),context=update.message.chat_id)
-    
-def sendlistdaily(context):
-    print("sending reminder")
-    context.bot.send_message(chat_id=context.job.context, 
-                             text = sm.getToDoList(context.job.context),
-                             parse_mode = ParseMode.MARKDOWN)
+def schedule_checker():
+    while True:
+        schedule.run_pending()
+        sleep(1) 
+
+def groupsend():
+    group=sm.alluserId()
+    for id in group:
+        bot.send_message(chat_id=id[0], text=sm.getToDoList(id[0]),parse_mode = ParseMode.MARKDOWN)
+
+def sendlistdaily():
+     return groupsend()
+
 
 def error(update, context):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 def main():
+    sm.creatTable()
     updater = Updater(TOKEN, use_context=True)
     job = updater.job_queue
     dp = updater.dispatcher
-    
+
     add_handler = ConversationHandler(
         entry_points=[MessageHandler(Filters.regex('^Add$'), add)],
         states={
             TASK: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), getTask)],
+            TASK_LIMIT: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), getTask)],
             DATE: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), getDate)],
             INVALIDDATE: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), invalidDate)],
             TIME: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), getTime)],
-            INVALIDTIME: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), invalidTime)]
+            INVALIDTIME: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), invalidTime)],
+            DONE_ADD: [MessageHandler(Filters.regex('^Yes$'), add),
+                       MessageHandler(Filters.regex('^No$'), done)],
+
         },
-        fallbacks=[MessageHandler(Filters.regex('^Cancel$'), cancelAdd)],
+        fallbacks=[MessageHandler(Filters.regex('^Cancel$'), cancel)],
+        allow_reentry = True
+    )
+
+    exam_handler = ConversationHandler(
+        entry_points=[MessageHandler(Filters.regex('^Exam$'), exam)],
+        states={
+            RECESSDATE: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), getRecessDate)],
+            EXAMDATE : [MessageHandler(Filters.regex('^((?!Cancel).)*$'), getExamDate)],
+            EXAM : [MessageHandler(Filters.regex('^((?!Cancel).)*$'), addExam)],
+            LEVEL: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), addLevel)]
+        },
+        fallbacks=[MessageHandler(Filters.regex('^Cancel$'), examcancel)],
         allow_reentry = True
     )
 
@@ -463,6 +582,7 @@ def main():
             INVALID_DATE: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), inputDate)],
             INVALID_TIME: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), inputTime)],
             EDIT_TASK: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), inputTask)],
+            MAX_LIMIT: [MessageHandler(Filters.regex('^((?!Cancel).)*$'), inputTask)],
             DONE_EDIT: [MessageHandler(Filters.regex('^Yes$'), selectCategory),
                         MessageHandler(Filters.regex('^No$'), done)],
         },
@@ -470,23 +590,25 @@ def main():
         fallbacks = [MessageHandler(Filters.regex('^Cancel$'),done)],
         allow_reentry = True,
     )
+
     dp.add_error_handler(error)
-    dp.add_handler(CallbackQueryHandler(removeButton, pattern = '^r'))
-    dp.add_handler(CommandHandler("start", start))
     dp.add_handler(add_handler)
+    dp.add_handler(exam_handler)
     dp.add_handler(edit_handler)
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CallbackQueryHandler(removeButton, pattern = '^r'))
     dp.add_handler(MessageHandler(Filters.regex('^List$'), list))
     dp.add_handler(MessageHandler(Filters.regex('^Remove'), remove))
     dp.add_handler(MessageHandler(Filters.regex('^Help$'), help))
-    dp.add_handler(CommandHandler("reminders", dailytimer, pass_job_queue = True))
-  
-    dp.add_handler(edit_handler)
-    
 
-
+    schedule.every().day.at('08:00').do(sendlistdaily)
+    schedule.every().day.at('20:00').do(sendlistdaily)
+    Thread(target=schedule_checker).start()
+	
     updater.start_polling()
     updater.idle() 
 
 if __name__=='__main__':
-    main() 
+    main()
+
 
