@@ -14,7 +14,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, ConversationHa
 from ServerManager import getToDoList
 from pytz import timezone
 
-TOKEN = '1389087532:AAF_mbgxdy15TI-swWBgMB6V3ggPHrrW7tU'
+TOKEN = ''
 bot = telegram.Bot(TOKEN)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -683,7 +683,7 @@ def main():
     updater.start_webhook(listen="0.0.0.0",
                           port=int(PORT),
                           url_path=TOKEN)
-    updater.bot.setWebhook('https://whispering-falls-53932.herokuapp.com/' + TOKEN)
+    updater.bot.setWebhook('https://herokuappname.herokuapp.com/' + TOKEN)
     #updater.start_polling()
     updater.idle() 
 

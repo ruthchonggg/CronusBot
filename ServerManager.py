@@ -4,7 +4,7 @@ import datetime
 import math
 import Quotes as qt
 
-#cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+#cnx = mysql.connector.connect(user='sql12351485', password='',
 #                              host='sql12.freemysqlhosting.net',
 #                              port='3306',
 #                              database='sql12351485')
@@ -15,7 +15,7 @@ slotMapTime = {1: "10am - 12pm: ", 2 : "1pm - 3pm: ", 3: "4pm - 6pm: ", 4: "7pm 
 
 def getToDoList(userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -61,7 +61,7 @@ def countDown(timeLeft):
 
 def getArrayList(userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -85,7 +85,7 @@ def getArrayList(userId):
 
 def getDoneList(userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -110,7 +110,7 @@ def getDoneList(userId):
 
 def duplicateTask(userId, task, deadline):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -134,7 +134,7 @@ def addTask(userId, task, deadline):
     print("Server manager add task executed")
 
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -154,7 +154,7 @@ def removeTask(userId, task, deadline):
     # print("remove task")
 
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -172,7 +172,7 @@ def removeTask(userId, task, deadline):
 def removeAllOverdue(userId):
   
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -210,7 +210,7 @@ def removeAllOverdue(userId):
 def editTaskName(new, rawData, userId):
     try:
         #print(rawData)
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -230,7 +230,7 @@ def editTaskName(new, rawData, userId):
 
 def editTaskDate(new, rawData, userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -255,7 +255,7 @@ def editTaskDate(new, rawData, userId):
 
 def editTaskTime(new, rawData, userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -279,7 +279,7 @@ def editTaskTime(new, rawData, userId):
 
 def insertSchedule(schedule, userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -305,7 +305,7 @@ def insertSchedule(schedule, userId):
 
 def deleteExistingSchedule(userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
@@ -322,7 +322,7 @@ def deleteExistingSchedule(userId):
 
 def retrieveDaySch(userId):
     try:
-        cnx = mysql.connector.connect(user='sql12351485', password='8dlb7NzbHF',
+        cnx = mysql.connector.connect(user='sql12351485', password='',
                               host='sql12.freemysqlhosting.net',
                               port='3306',
                               database='sql12351485')
