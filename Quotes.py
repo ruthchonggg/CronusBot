@@ -1,5 +1,6 @@
 from random import randrange
 
+#--
 quote_bank = ["_\"Today is your opportunity to build the tomorrow you want.\” \n- Ken Poirot_ \n",
               "_\"Believe you can and you’re halfway there.\"_\n",
               "_\"You have to expect things of yourself before you can do them.\" _ \n",
